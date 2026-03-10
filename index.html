@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Агентский дашборд</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #151820;
+    --surface2: #1c2030;
+    --border: #252a3a;
+    --accent: #e8c84a;
+    --accent2: #4a9eff;
+    --accent3: #5dde8a;
+    --danger: #ff6b5a;
+    --text: #f0f2f8;
+    --muted: #6b7494;
+    --muted2: #9ba3c4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Golos Text', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+    background-image: radial-gradient(ellipse 60% 40% at 70% 10%, rgba(74,158,255,0.06) 0%, transparent 60%),
+                      radial-gradient(ellipse 40% 30% at 10% 80%, rgba(232,200,74,0.05) 0%, transparent 50%);
+  }
+
+  h1, h2, h3, .stat-value { font-family: 'Unbounded', sans-serif; }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .header-left p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .badge {
+    background: linear-gradient(135deg, rgba(232,200,74,0.15), rgba(232,200,74,0.05));
+    border: 1px solid rgba(232,200,74,0.3);
+    color: var(--accent);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 600;
+  }
+
+  /* GRID */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: rgba(255,255,255,0.12); }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  }
+
+  .card-label {
+    font-size: 11px;
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+  .stat-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .green { color: var(--accent3); }
+  .yellow { color: var(--accent); }
+  .blue { color: var(--accent2); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* CALCULATOR CARD */
+  .calc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 20px;
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label {
+    font-size: 11px;
+    font-family: 'Unbounded', sans-serif;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  input[type="number"], select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'Golos Text', sans-serif;
+    font-size: 15px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  input[type="number"]:focus, select:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(74,158,255,0.1);
+  }
+  select option { background: var(--surface2); }
+
+  .btn {
+    background: var(--accent);
+    color: #0d0f14;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 20px;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: #f0d460; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+
+  /* BONUSES */
+  .bonuses-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .bonus-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .bonus-chip:hover { border-color: var(--accent2); }
+  .bonus-chip.active {
+    background: rgba(93,222,138,0.08);
+    border-color: rgba(93,222,138,0.4);
+    color: var(--accent3);
+  }
+  .bonus-chip input[type="checkbox"] { display: none; }
+  .bonus-chip .chip-icon { font-size: 16px; }
+  .bonus-chip .chip-label { font-size: 13px; font-weight: 500; }
+  .bonus-chip .chip-pct {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent3);
+    background: rgba(93,222,138,0.1);
+    padding: 2px 7px;
+    border-radius: 6px;
+  }
+
+  /* RESULT BAR */
+  .result-bar {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .result-item { flex: 1; text-align: center; }
+  .result-item .r-label { font-size: 11px; color: var(--muted); text-transform: uppercase; font-family: 'Unbounded', sans-serif; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .result-item .r-value { font-family: 'Unbounded', sans-serif; font-size: 20px; font-weight: 700; }
+  .result-divider { width: 1px; height: 40px; background: var(--border); }
+
+  /* PCT BREAKDOWN */
+  .pct-track {
+    background: var(--surface2);
+    border-radius: 8px;
+    height: 10px;
+    margin-top: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+  .pct-fill {
+    height: 100%;
+    border-radius: 8px;
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+    background: linear-gradient(90deg, var(--accent2), var(--accent3));
+    position: relative;
+  }
+  .pct-fill::after {
+    content: '';
+    position: absolute; right: 0; top: 0; bottom: 0; width: 16px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 8px;
+  }
+
+  /* DEALS TABLE */
+  .deals-table { width: 100%; border-collapse: collapse; }
+  .deals-table th {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .deals-table td { padding: 12px 12px; font-size: 14px; border-bottom: 1px solid rgba(37,42,58,0.5); }
+  .deals-table tr:last-child td { border-bottom: none; }
+  .deals-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .stage-tag {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .stage-new { background: rgba(74,158,255,0.15); color: var(--accent2); }
+  .stage-sale { background: rgba(93,222,138,0.12); color: var(--accent3); }
+
+  /* GOAL BLOCK */
+  .goal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .goal-card::after {
+    content: '🎯';
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    font-size: 40px;
+    opacity: 0.15;
+  }
+
+  .goal-input-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 20px;
+  }
+
+  /* PROGRESS */
+  .progress-wrap { margin-top: 6px; }
+  .progress-track {
+    background: var(--surface2);
+    border-radius: 999px;
+    height: 12px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent3));
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    position: relative;
+  }
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 20px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 999px;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
+
+  .goal-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 16px;
+  }
+  .goal-stat {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+  }
+  .goal-stat .gs-label { font-size: 11px; color: var(--muted); text-transform: uppercase; font-family: 'Unbounded', sans-serif; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .goal-stat .gs-value { font-family: 'Unbounded', sans-serif; font-size: 16px; font-weight: 700; }
+
+  /* MOTIVATION BANNER */
+  .moto-banner {
+    background: linear-gradient(135deg, rgba(232,200,74,0.08), rgba(93,222,138,0.05));
+    border: 1px solid rgba(232,200,74,0.2);
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 16px;
+  }
+  .moto-icon { font-size: 28px; }
+  .moto-text { flex: 1; }
+  .moto-text strong { font-family: 'Unbounded', sans-serif; font-size: 14px; color: var(--accent); display: block; margin-bottom: 3px; }
+  .moto-text span { font-size: 13px; color: var(--muted2); }
+
+  /* TOOLTIP-like info */
+  .info-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .info-pill {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--muted2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .info-pill b { color: var(--text); }
+
+  @media(max-width: 900px) {
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .input-row { grid-template-columns: 1fr 1fr; }
+    .goal-input-row { grid-template-columns: 1fr 1fr; }
+    .btn { grid-column: 1/-1; }
+  }
+  @media(max-width: 600px) {
+    body { padding: 12px; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .input-row { grid-template-columns: 1fr; }
+    .result-bar { flex-direction: column; gap: 12px; }
+    .result-divider { width: 100%; height: 1px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Агентский дашборд</h1>
+    <p>Комиссии · Сделки в работе · Цели</p>
+  </div>
+  <span class="badge" id="agentPct">40%</span>
+</div>
+
+<!-- STATS TOP -->
+<div class="grid-3" id="statsGrid">
+  <div class="card">
+    <div class="card-label">Сделки в работе</div>
+    <div class="stat-value blue" id="totalDeals">3</div>
+    <div class="stat-sub">активных сделки</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Потенциал комиссии</div>
+    <div class="stat-value yellow" id="totalPotential">—</div>
+    <div class="stat-sub">если все закроются</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Валовая по сделкам</div>
+    <div class="stat-value green" id="totalGross">—</div>
+    <div class="stat-sub">до вычета расходов</div>
+  </div>
+</div>
+
+<!-- CALCULATOR -->
+<div class="section-title">🧮 Калькулятор комиссии</div>
+
+<div class="calc-card">
+  <div class="input-row">
+    <div class="field-group">
+      <span class="field-label">Комиссия (от клиента)</span>
+      <input type="number" id="commInput" placeholder="например 180000" value="180000" oninput="calcComm()">
+    </div>
+    <div class="field-group">
+      <span class="field-label">Тип сделки</span>
+      <select id="dealType" onchange="calcComm()">
+        <option value="buy">Покупка квартиры</option>
+        <option value="new">Новостройка</option>
+        <option value="sale">Продажа квартиры</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <span class="field-label">Итого за месяц (все сделки)</span>
+      <input type="number" id="monthTotal" placeholder="например 320000" value="320000" oninput="calcComm()">
+    </div>
+    <button class="btn" onclick="addDeal()">+ В сделки</button>
+  </div>
+
+  <!-- BONUSES -->
+  <div style="margin-bottom:12px;">
+    <div class="field-label" style="margin-bottom:8px;">Бонусы агента</div>
+    <div class="bonuses-row">
+      <label class="bonus-chip" id="chip-plan" onclick="toggleChip('plan')">
+        <span class="chip-icon">🏆</span>
+        <span class="chip-label">Повторное выполнение плана</span>
+        <span class="chip-pct">+5%</span>
+      </label>
+      <label class="bonus-chip" id="chip-video" onclick="toggleChip('video')">
+        <span class="chip-icon">🎥</span>
+        <span class="chip-label">Видео-отзыв</span>
+        <span class="chip-pct">+3%</span>
+      </label>
+      <label class="bonus-chip" id="chip-text" onclick="toggleChip('text')">
+        <span class="chip-icon">✍️</span>
+        <span class="chip-label">Текстовый отзыв</span>
+        <span class="chip-pct">+2%</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-bar">
+    <div class="result-item">
+      <div class="r-label">Ставка агента</div>
+      <div class="r-value yellow" id="rPct">40%</div>
+    </div>
+    <div class="result-divider"></div>
+    <div class="result-item">
+      <div class="r-label">Чистая база</div>
+      <div class="r-value blue" id="rBase">—</div>
+    </div>
+    <div class="result-divider"></div>
+    <div class="result-item">
+      <div class="r-label">Вы получаете</div>
+      <div class="r-value green" id="rResult">—</div>
+    </div>
+    <div class="result-divider"></div>
+    <div class="result-item">
+      <div class="r-label">Агентству</div>
+      <div class="r-value" id="rAgency" style="color:var(--muted2)">—</div>
+    </div>
+  </div>
+
+  <!-- PCT TRACK 40–60 -->
+  <div style="margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:12px;color:var(--muted);">Ставка агента</span>
+      <span id="pctLabel" style="font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">40%</span>
+    </div>
+    <div class="pct-track">
+      <div class="pct-fill" id="pctFill" style="width:0%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;">
+      <span style="font-family:'Unbounded',sans-serif;color:var(--muted2)">40%</span>
+      <span>45%</span>
+      <span>50%</span>
+      <span>55%</span>
+      <span style="font-family:'Unbounded',sans-serif;color:var(--muted2)">60%</span>
+    </div>
+  </div>
+
+  <div class="info-row" id="infoRow"></div>
+</div>
+
+<!-- DEALS IN WORK -->
+<div class="section-title">📂 Сделки в работе</div>
+
+<div class="card" style="margin-bottom:20px; padding:0; overflow:hidden;">
+  <table class="deals-table" id="dealsTable">
+    <thead>
+      <tr>
+        <th>Сделка</th>
+        <th>Тип</th>
+        <th>Стадия</th>
+        <th>Комиссия</th>
+        <th>База (после расх.)</th>
+        <th>Ставка</th>
+        <th>Вы получите</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="dealsTbody">
+    </tbody>
+  </table>
+</div>
+
+<!-- GOAL -->
+<div class="section-title">🎯 Моя цель</div>
+
+<div class="goal-card">
+  <div class="goal-input-row">
+    <div class="field-group">
+      <span class="field-label">Название цели</span>
+      <input type="text" id="goalName" placeholder="например: Мотоцикл Ducati" value="Мотоцикл" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:'Golos Text',sans-serif;font-size:15px;outline:none;width:100%;transition:border-color 0.2s;" oninput="calcGoal()">
+    </div>
+    <div class="field-group">
+      <span class="field-label">Стоимость (₽)</span>
+      <input type="number" id="goalCost" placeholder="1200000" value="1200000" oninput="calcGoal()">
+    </div>
+    <button class="btn" onclick="calcGoal()">Рассчитать</button>
+  </div>
+
+  <div class="progress-wrap">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted2);">
+      <span>Накоплено из сделок в работе</span>
+      <span id="goalPctLabel">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="goalProgress" style="width:0%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);">
+      <span id="goalEarned">0 ₽</span>
+      <span id="goalTarget">1 200 000 ₽</span>
+    </div>
+  </div>
+
+  <div class="goal-stats">
+    <div class="goal-stat">
+      <div class="gs-label">Нужно ещё</div>
+      <div class="gs-value yellow" id="goalNeed">1 200 000 ₽</div>
+    </div>
+    <div class="goal-stat">
+      <div class="gs-label">Сделок по 180к валовой</div>
+      <div class="gs-value blue" id="goalDealsCount">~5</div>
+    </div>
+    <div class="goal-stat">
+      <div class="gs-label">При ставке 40% нужно валовой</div>
+      <div class="gs-value green" id="goalGrossNeed">3 000 000 ₽</div>
+    </div>
+  </div>
+
+  <div class="moto-banner" id="motoBanner">
+    <div class="moto-icon" id="motoEmoji">🏍️</div>
+    <div class="moto-text">
+      <strong id="motoTitle">До мотоцикла — 5 сделок!</strong>
+      <span id="motoSub">Закрой сделки в работе и ты уже на 0% пути к цели</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = n => new Intl.NumberFormat('ru-RU').format(Math.round(n)) + ' ₽';
+const fmtNo = n => new Intl.NumberFormat('ru-RU').format(Math.round(n));
+
+// Стадии по типу воронки — реальные стадии из Битрикса
+const STAGES_BY_TYPE = {
+  new: [
+    { id: 's1', label: '1. Отправка вариантов', color: '#6b7494', bg: 'rgba(107,116,148,0.15)', inPotential: false, weight: 0,    tag: 'Начало работы' },
+    { id: 's2', label: '2. Получение ипотеки',  color: '#29b6d8', bg: 'rgba(41,182,216,0.13)',  inPotential: true,  weight: 0.25, tag: 'В работе' },
+    { id: 's3', label: '3. Экскурсии',          color: '#7ecb35', bg: 'rgba(126,203,53,0.13)',  inPotential: true,  weight: 0.35, tag: 'В работе' },
+    { id: 's4', label: '4. Принятие решения',   color: '#4dcfb0', bg: 'rgba(77,207,176,0.13)',  inPotential: true,  weight: 0.50, tag: 'В работе' },
+    { id: 's5', label: '5. Бронь',              color: '#f5a623', bg: 'rgba(245,166,35,0.13)',  inPotential: true,  weight: 0.70, tag: 'Высокий потенциал' },
+    { id: 's6', label: '6. Подготовка к сделке',color: '#29b6d8', bg: 'rgba(41,182,216,0.10)',  inPotential: true,  weight: 0.85, tag: 'Высокий потенциал' },
+    { id: 's7', label: '7. Ожидание оплаты',    color: '#29b6d8', bg: 'rgba(41,182,216,0.10)',  inPotential: true,  weight: 0.95, tag: 'Высокий потенциал' },
+    { id: 's8', label: '8. Сделка успешна',     color: '#5dde8a', bg: 'rgba(93,222,138,0.15)',  inPotential: true,  weight: 1.0,  tag: 'Закрыто' },
+  ],
+  buy: [
+    { id: 'b1', label: '1. Заключение договора',color: '#6b7494', bg: 'rgba(107,116,148,0.15)', inPotential: false, weight: 0,    tag: 'Начало работы' },
+    { id: 'b2', label: '2. Получение ипотеки',  color: '#29b6d8', bg: 'rgba(41,182,216,0.13)',  inPotential: true,  weight: 0.25, tag: 'В работе' },
+    { id: 'b3', label: '3. Подбор варианта',    color: '#29b6d8', bg: 'rgba(41,182,216,0.13)',  inPotential: true,  weight: 0.35, tag: 'В работе' },
+    { id: 'b4', label: '4. Принятие решения',   color: '#4dcfb0', bg: 'rgba(77,207,176,0.13)',  inPotential: true,  weight: 0.50, tag: 'В работе' },
+    { id: 'b5', label: '5. ПДКП',               color: '#f5a623', bg: 'rgba(245,166,35,0.13)',  inPotential: true,  weight: 0.75, tag: 'Высокий потенциал' },
+    { id: 'b6', label: '6. Подготовка к сделке',color: '#29b6d8', bg: 'rgba(41,182,216,0.10)',  inPotential: true,  weight: 0.88, tag: 'Высокий потенциал' },
+    { id: 'b7', label: '7. Сделка',             color: '#5dde8a', bg: 'rgba(93,222,138,0.15)',  inPotential: true,  weight: 1.0,  tag: 'Высокий потенциал' },
+    { id: 'b8', label: '8. Сделка успешна',     color: '#5dde8a', bg: 'rgba(93,222,138,0.15)',  inPotential: true,  weight: 1.0,  tag: 'Закрыто' },
+  ],
+  sale: [
+    { id: 'p1', label: '1. Аналитика',              color: '#6b7494', bg: 'rgba(107,116,148,0.15)', inPotential: false, weight: 0,    tag: 'Начало работы' },
+    { id: 'p2', label: '2. Подготовка договора',     color: '#29b6d8', bg: 'rgba(41,182,216,0.13)',  inPotential: true,  weight: 0.20, tag: 'В работе' },
+    { id: 'p3', label: '3. Подготовка объекта',      color: '#29b6d8', bg: 'rgba(41,182,216,0.13)',  inPotential: true,  weight: 0.30, tag: 'В работе' },
+    { id: 'p4', label: '4. Экспозиция',              color: '#4dcfb0', bg: 'rgba(77,207,176,0.13)',  inPotential: true,  weight: 0.40, tag: 'В работе' },
+    { id: 'p5', label: '5. Договорились на ПДКП',    color: '#e8d44a', bg: 'rgba(232,212,74,0.13)',  inPotential: true,  weight: 0.72, tag: 'Высокий потенциал' },
+    { id: 'p6', label: '6. Подготовка к сделке',     color: '#f5a623', bg: 'rgba(245,166,35,0.13)',  inPotential: true,  weight: 0.88, tag: 'Высокий потенциал' },
+    { id: 'p7', label: '7. Сделка',                  color: '#5dde8a', bg: 'rgba(93,222,138,0.15)',  inPotential: true,  weight: 1.0,  tag: 'Высокий потенциал' },
+    { id: 'p8', label: '8. Сделка успешна',          color: '#5dde8a', bg: 'rgba(93,222,138,0.15)',  inPotential: true,  weight: 1.0,  tag: 'Закрыто' },
+  ],
+};
+
+// Для обратной совместимости — плоский поиск по всем
+function getStage(id, funnel) {
+  const list = STAGES_BY_TYPE[funnel] || Object.values(STAGES_BY_TYPE).flat();
+  return list.find(s => s.id === id) || list[0];
+}
+function getStagesForFunnel(funnel) { return STAGES_BY_TYPE[funnel] || STAGES_BY_TYPE.buy; }
+
+let bonuses = { plan: false, video: false, text: false };
+let deals = [
+  { name: 'ЖК Парк Победы кв.45',  funnel: 'new',  comm: 180000, stage: 's5' },
+  { name: 'Покупка — Садовая 12',   funnel: 'buy',  comm: 220000, stage: 'b4' },
+  { name: 'Продажа — Ленина 78',    funnel: 'sale', comm: 95000,  stage: 'p2' },
+];
+
+function toggleChip(key) {
+  bonuses[key] = !bonuses[key];
+  document.getElementById('chip-' + key).classList.toggle('active', bonuses[key]);
+  calcComm();
+}
+
+function getRate(monthTotal) {
+  let base = parseFloat(monthTotal) >= 300000 ? 50 : 40;
+  let bonus = 0;
+  if (bonuses.plan) bonus += 5;
+  if (bonuses.video) bonus += 3;
+  if (bonuses.text) bonus += 2;
+  return { base, bonus, total: Math.min(base + bonus, 60) };
+}
+
+function getBase(comm, type) {
+  return type === 'new' ? comm * 0.92 : comm;
+}
+
+function calcComm() {
+  const comm = parseFloat(document.getElementById('commInput').value) || 0;
+  const type = document.getElementById('dealType').value;
+  const monthTotal = parseFloat(document.getElementById('monthTotal').value) || 0;
+
+  const base = document.getElementById('dealType').value === 'new' ? comm * 0.92 : comm;
+  const { base: rateBase, bonus: rateBonus, total: rate } = getRate(monthTotal);
+  const result = base * rate / 100;
+  const agency = base - result;
+
+  document.getElementById('rPct').textContent = rate + '%';
+  document.getElementById('rBase').textContent = comm > 0 ? fmt(base) : '—';
+  document.getElementById('rResult').textContent = comm > 0 ? fmt(result) : '—';
+  document.getElementById('rAgency').textContent = comm > 0 ? fmt(agency) : '—';
+  document.getElementById('agentPct').textContent = rate + '%';
+  document.getElementById('pctLabel').textContent = rate + '%';
+
+  // Полоска 40–60: 0% = 40%, 100% = 60%
+  const fillPct = ((rate - 40) / 20) * 100;
+  document.getElementById('pctFill').style.width = Math.max(0, fillPct) + '%';
+
+  // info pills
+  let infos = [];
+  const type = document.getElementById('dealType').value;
+  if (type === 'new') infos.push(`<div class="info-pill">🏗️ Новостройка: <b>-8% расходов (${fmt(comm * 0.08)})</b></div>`);
+  if (monthTotal >= 300000) infos.push(`<div class="info-pill">🏆 План выполнен: <b>базовая ставка 50%</b></div>`);
+  if (bonuses.plan) infos.push(`<div class="info-pill">🔁 Повторный план: <b>+5%</b></div>`);
+  if (bonuses.video) infos.push(`<div class="info-pill">🎥 Видео-отзыв: <b>+3%</b></div>`);
+  if (bonuses.text) infos.push(`<div class="info-pill">✍️ Текст-отзыв: <b>+2%</b></div>`);
+  document.getElementById('infoRow').innerHTML = infos.join('');
+
+  renderDeals();
+  updateStats();
+}
+
+let dealCounter = 4;
+function addDeal() {
+  const comm = parseFloat(document.getElementById('commInput').value) || 0;
+  const funnel = document.getElementById('dealType').value;
+  if (!comm) return;
+  const stages = getStagesForFunnel(funnel);
+  deals.push({ name: `Сделка #${dealCounter++}`, funnel, comm, stage: stages[0].id });
+  renderDeals();
+  updateStats();
+  calcGoal();
+}
+
+function removeDeal(i) {
+  deals.splice(i, 1);
+  renderDeals();
+  updateStats();
+  calcGoal();
+}
+
+function changeStage(i, val) {
+  deals[i].stage = val;
+  renderDeals();
+  updateStats();
+  calcGoal();
+}
+
+const FUNNEL_LABELS = { new: 'Новостройка', buy: 'Покупка', sale: 'Продажа' };
+const FUNNEL_COLORS = { new: 'stage-new', buy: 'stage-sale', sale: 'stage-sale' };
+
+function renderDeals() {
+  const monthTotal = parseFloat(document.getElementById('monthTotal').value) || 0;
+  const { total: rate } = getRate(monthTotal);
+  const tbody = document.getElementById('dealsTbody');
+
+  tbody.innerHTML = deals.map((d, i) => {
+    const stages = getStagesForFunnel(d.funnel);
+    const stage = getStage(d.stage, d.funnel);
+    // Для новостройки вычитаем 8%
+    const base = d.funnel === 'new' ? d.comm * 0.92 : d.comm;
+    const earn = stage.inPotential ? base * rate / 100 * stage.weight : 0;
+
+    const funnelLabel = `<span class="stage-tag ${FUNNEL_COLORS[d.funnel]}">${FUNNEL_LABELS[d.funnel]}</span>`;
+
+    const stageSelect = `<select onchange="changeStage(${i}, this.value)"
+      style="background:${stage.bg};border:1px solid ${stage.color}55;border-radius:8px;padding:5px 8px;color:${stage.color};font-size:12px;font-weight:600;font-family:'Golos Text',sans-serif;outline:none;cursor:pointer;max-width:200px;">
+      ${stages.map(s => `<option value="${s.id}" ${s.id === d.stage ? 'selected' : ''}>${s.label}</option>`).join('')}
+    </select>`;
+
+    // Бейдж потенциала
+    let potBadge = '';
+    if (!stage.inPotential) {
+      potBadge = `<span style="color:var(--muted);font-size:11px;">начало работы</span>`;
+    } else if (stage.weight >= 0.7) {
+      potBadge = `<span style="color:var(--accent3);font-family:'Unbounded',sans-serif;font-weight:700;font-size:14px">${fmt(earn)}</span><span style="color:var(--accent3);font-size:10px;display:block;margin-top:2px;">🔥 высокий потенциал · ${Math.round(stage.weight*100)}%</span>`;
+    } else {
+      potBadge = `<span style="color:var(--accent2);font-family:'Unbounded',sans-serif;font-weight:700;font-size:14px">${fmt(earn)}</span><span style="color:var(--muted);font-size:10px;display:block;margin-top:2px;">в работе · ${Math.round(stage.weight*100)}%</span>`;
+    }
+
+    return `<tr>
+      <td style="font-weight:500">${d.name}</td>
+      <td>${funnelLabel}</td>
+      <td>${stageSelect}</td>
+      <td>${fmt(d.comm)}</td>
+      <td>${fmt(base)}</td>
+      <td style="font-family:'Unbounded',sans-serif;font-weight:700;color:var(--accent)">${rate}%</td>
+      <td>${potBadge}</td>
+      <td><button onclick="removeDeal(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px;transition:color 0.2s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateStats() {
+  const monthTotal = parseFloat(document.getElementById('monthTotal').value) || 0;
+  const { total: rate } = getRate(monthTotal);
+  let totalGross = 0, totalEarn = 0, countActive = 0;
+  deals.forEach(d => {
+    const stage = getStage(d.stage, d.funnel);
+    const base = d.funnel === 'new' ? d.comm * 0.92 : d.comm;
+    if (stage.inPotential) {
+      totalGross += base;
+      totalEarn += base * rate / 100 * stage.weight;
+      countActive++;
+    }
+  });
+  document.getElementById('totalDeals').textContent = countActive + ' / ' + deals.length;
+  document.getElementById('totalPotential').textContent = fmt(totalEarn);
+  document.getElementById('totalGross').textContent = fmt(totalGross);
+}
+
+function calcGoal() {
+  const cost = parseFloat(document.getElementById('goalCost').value) || 0;
+  const name = document.getElementById('goalName').value || 'Цель';
+  const monthTotal = parseFloat(document.getElementById('monthTotal').value) || 0;
+  const { total: rate } = getRate(monthTotal);
+
+  let earned = 0;
+  deals.forEach(d => {
+    const stage = getStage(d.stage, d.funnel);
+    if (!stage.inPotential) return;
+    const base = d.funnel === 'new' ? d.comm * 0.92 : d.comm;
+    earned += base * rate / 100 * stage.weight;
+  });
+
+  const pct = cost > 0 ? Math.min(earned / cost * 100, 100) : 0;
+  const need = Math.max(cost - earned, 0);
+  const avgDealComm = 180000;
+  const avgEarnPerDeal = avgDealComm * rate / 100;
+  const dealsNeeded = avgEarnPerDeal > 0 ? Math.ceil(need / avgEarnPerDeal) : 0;
+  const grossNeed = rate > 0 ? need / (rate / 100) : 0;
+
+  document.getElementById('goalProgress').style.width = pct + '%';
+  document.getElementById('goalPctLabel').textContent = Math.round(pct) + '%';
+  document.getElementById('goalEarned').textContent = fmt(earned);
+  document.getElementById('goalTarget').textContent = fmt(cost);
+  document.getElementById('goalNeed').textContent = fmt(need);
+  document.getElementById('goalDealsCount').textContent = dealsNeeded > 0 ? '~' + dealsNeeded : '✅ Достигнуто!';
+  document.getElementById('goalGrossNeed').textContent = fmt(grossNeed);
+
+  const n = name.toLowerCase();
+  let emoji = '🎯';
+  if (n.includes('мото') || n.includes('байк')) emoji = '🏍️';
+  else if (n.includes('авто') || n.includes('машин')) emoji = '🚗';
+  else if (n.includes('квар') || n.includes('дом')) emoji = '🏠';
+  else if (n.includes('отпуск') || n.includes('путешес')) emoji = '✈️';
+  else if (n.includes('телефон') || n.includes('iphone')) emoji = '📱';
+  document.getElementById('motoEmoji').textContent = emoji;
+
+  if (pct >= 100) {
+    document.getElementById('motoTitle').textContent = `🎉 Цель достигнута!`;
+    document.getElementById('motoSub').textContent = `Поздравляем! Ты заработал на "${name}"!`;
+  } else if (pct > 50) {
+    document.getElementById('motoTitle').textContent = `До "${name}" уже больше половины!`;
+    document.getElementById('motoSub').textContent = `Ещё ${dealsNeeded} сделок — и цель твоя. Не останавливайся!`;
+  } else {
+    document.getElementById('motoTitle').textContent = `До "${name}" — ${dealsNeeded} сделок!`;
+    document.getElementById('motoSub').textContent = `Потенциал из текущих сделок покрывает ${Math.round(pct)}% от цели`;
+  }
+}
+
+// INIT
+renderDeals();
+updateStats();
+calcComm();
+calcGoal();
+</script>
+</body>
+</html>
