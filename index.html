@@ -411,10 +411,19 @@
 </head>
 <body>
 
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;gap:16px;">
+  <div style="font-family:'Unbounded',sans-serif;font-size:14px;color:var(--muted2);">Загружаем данные из Битрикс24...</div>
+  <div style="width:200px;height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;">
+    <div id="loadBar" style="width:0%;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent3));border-radius:4px;transition:width 0.3s;"></div>
+  </div>
+  <div id="loadStatus" style="font-size:12px;color:var(--muted);">Подключение...</div>
+</div>
+
 <div class="header">
   <div class="header-left">
     <h1>Агентский дашборд</h1>
-    <p>Комиссии · Сделки в работе · Цели</p>
+    <p id="agentName">Комиссии · Сделки в работе · Цели</p>
   </div>
   <span class="badge" id="agentPct">40%</span>
 </div>
@@ -849,11 +858,216 @@ function calcGoal() {
   }
 }
 
+// ============================================================
+// БИТРИКС24 ИНТЕГРАЦИЯ
+// ============================================================
+const WEBHOOK = 'https://kvartiram.bitrix24.ru/rest/1/cineznr18i5uygl1/';
+const COMM_FIELD = 'UF_CRM_1520172185788';
+
+// Маппинг STAGE_ID → наши стадии воронок
+// CATEGORY_ID: 0=общая, остальные — смарт-воронки
+// Маппим по STAGE_ID которые видели в данных
+const STAGE_MAP = {
+  // Новостройка (CATEGORY_ID определяем отдельно)
+  'NEW:PREPARATION':    { funnel: 'new',  stage: 's1' },
+  'NEW:MORTGAGE':       { funnel: 'new',  stage: 's2' },
+  'NEW:EXCURSION':      { funnel: 'new',  stage: 's3' },
+  'NEW:DECISION':       { funnel: 'new',  stage: 's4' },
+  'NEW:BOOKING':        { funnel: 'new',  stage: 's5' },
+  'NEW:PREPARATION2':   { funnel: 'new',  stage: 's6' },
+  'NEW:WAITING':        { funnel: 'new',  stage: 's7' },
+  // Покупка
+  'BUY:CONTRACT':       { funnel: 'buy',  stage: 'b1' },
+  'BUY:MORTGAGE':       { funnel: 'buy',  stage: 'b2' },
+  'BUY:SELECTION':      { funnel: 'buy',  stage: 'b3' },
+  'BUY:DECISION':       { funnel: 'buy',  stage: 'b4' },
+  'BUY:PDKP':           { funnel: 'buy',  stage: 'b5' },
+  'BUY:PREPARATION':    { funnel: 'buy',  stage: 'b6' },
+  'BUY:DEAL':           { funnel: 'buy',  stage: 'b7' },
+  // Продажа
+  'SALE:ANALYTICS':     { funnel: 'sale', stage: 'p1' },
+  'SALE:CONTRACT':      { funnel: 'sale', stage: 'p2' },
+  'SALE:OBJECT':        { funnel: 'sale', stage: 'p3' },
+  'SALE:EXPOSITION':    { funnel: 'sale', stage: 'p4' },
+  'SALE:PDKP':          { funnel: 'sale', stage: 'p5' },
+  'SALE:PREPARATION':   { funnel: 'sale', stage: 'p6' },
+  'SALE:DEAL':          { funnel: 'sale', stage: 'p7' },
+};
+
+function setLoadProgress(pct, text) {
+  document.getElementById('loadBar').style.width = pct + '%';
+  document.getElementById('loadStatus').textContent = text;
+}
+
+async function bx(method, params = {}) {
+  const url = new URL(WEBHOOK + method + '.json');
+  Object.entries(params).forEach(([k, v]) => {
+    if (Array.isArray(v)) v.forEach(i => url.searchParams.append(k + '[]', i));
+    else url.searchParams.append(k, v);
+  });
+  const res = await fetch(url);
+  const data = await res.json();
+  return data.result;
+}
+
+// Определяем воронку по CATEGORY_ID и STAGE_ID
+// Загружаем все воронки чтобы понять маппинг
+let categoryMap = {}; // categoryId -> funnel type
+
+async function loadCategories() {
+  try {
+    const cats = await bx('crm.deal.category.list');
+    if (!cats) return;
+    const list = cats.items || cats;
+    list.forEach(c => {
+      const name = (c.NAME || '').toLowerCase();
+      if (name.includes('новостройк') || name.includes('new')) categoryMap[c.ID] = 'new';
+      else if (name.includes('покупк') || name.includes('buy')) categoryMap[c.ID] = 'buy';
+      else if (name.includes('продаж') || name.includes('sale')) categoryMap[c.ID] = 'sale';
+      else categoryMap[c.ID] = 'buy'; // fallback
+    });
+    categoryMap['0'] = 'buy'; // общая воронка
+  } catch(e) { console.log('categories error', e); }
+}
+
+function guessFunnelFromStage(stageId, categoryId) {
+  // По категории
+  const catFunnel = categoryMap[String(categoryId)];
+  if (catFunnel) return catFunnel;
+  // По stage_id строке
+  const s = (stageId || '').toUpperCase();
+  if (s.includes('NEW') || s.includes('BOOKING') || s.includes('EXCURS')) return 'new';
+  if (s.includes('BUY') || s.includes('SELECT') || s.includes('PDKP')) return 'buy';
+  if (s.includes('SALE') || s.includes('EXPOS') || s.includes('ANALYT')) return 'sale';
+  return 'buy';
+}
+
+function guessStageFunnel(stageId, funnel) {
+  // Пробуем найти похожую стадию по названию
+  const stages = getStagesForFunnel(funnel);
+  const s = (stageId || '').toUpperCase();
+  // Эвристика по ключевым словам
+  if (s.includes('WON') || s.includes('SUCCESS')) return stages[stages.length - 1].id;
+  if (s.includes('ANALYT')) return stages[0].id;
+  if (s.includes('CONTRACT') || s.includes('PREPARATION')) return stages[0].id;
+  if (s.includes('MORTGAGE') || s.includes('IPOTEKA')) return stages[1]?.id || stages[0].id;
+  if (s.includes('SELECTION') || s.includes('EXCURS') || s.includes('PODBOR')) return stages[2]?.id || stages[1].id;
+  if (s.includes('DECISION') || s.includes('PRINCIP')) return stages[3]?.id || stages[2].id;
+  if (s.includes('BOOKING') || s.includes('BRON') || s.includes('PDKP')) return stages[4]?.id || stages[3].id;
+  if (s.includes('DEAL') || s.includes('SDELKA')) return stages[6]?.id || stages[stages.length-2].id;
+  // Средняя стадия по умолчанию
+  return stages[Math.floor(stages.length / 2)].id;
+}
+
+async function loadBitrixDeals(userId, isAdmin) {
+  const filter = {
+    'CLOSED': 'N',
+    'SELECT[]': ['ID', 'TITLE', 'STAGE_ID', 'CATEGORY_ID', 'ASSIGNED_BY_ID', COMM_FIELD],
+  };
+
+  // Агент видит только свои, руководитель — все
+  if (!isAdmin) {
+    filter['ASSIGNED_BY_ID'] = userId;
+  }
+
+  let allDeals = [];
+  let start = 0;
+
+  while (true) {
+    const result = await bx('crm.deal.list', {
+      ...filter,
+      start,
+    });
+    if (!result || !result.length) break;
+    allDeals = allDeals.concat(result);
+    if (result.length < 50) break;
+    start += 50;
+  }
+
+  return allDeals;
+}
+
+function bitrixDealToLocal(bxDeal) {
+  const funnel = guessFunnelFromStage(bxDeal.STAGE_ID, bxDeal.CATEGORY_ID);
+  const stage = guessStageFunnel(bxDeal.STAGE_ID, funnel);
+  const comm = parseFloat(bxDeal[COMM_FIELD]) || 0;
+  return {
+    name: bxDeal.TITLE || `Сделка #${bxDeal.ID}`,
+    funnel,
+    stage,
+    comm,
+    bxId: bxDeal.ID,
+    assignedById: bxDeal.ASSIGNED_BY_ID,
+  };
+}
+
+async function initBitrix() {
+  try {
+    setLoadProgress(10, 'Определяем пользователя...');
+    const profile = await bx('profile');
+    const userId = profile?.ID;
+    const isAdmin = profile?.ADMIN === true || profile?.ADMIN === 'true';
+    const userName = [profile?.NAME, profile?.LAST_NAME].filter(Boolean).join(' ');
+
+    document.getElementById('agentName').textContent =
+      `👤 ${userName || 'Агент'} · Комиссии · Сделки · Цели`;
+
+    setLoadProgress(35, 'Загружаем воронки...');
+    await loadCategories();
+
+    setLoadProgress(60, 'Загружаем сделки...');
+    const bxDeals = await loadBitrixDeals(userId, isAdmin);
+
+    setLoadProgress(85, 'Обрабатываем данные...');
+
+    // Заменяем демо-сделки на реальные (только с заполненной комиссией)
+    const realDeals = bxDeals
+      .map(bitrixDealToLocal)
+      .filter(d => d.comm > 0);
+
+    if (realDeals.length > 0) {
+      deals.length = 0;
+      realDeals.forEach(d => deals.push(d));
+    }
+
+    // Считаем суммарную валовую для определения ставки
+    const totalGrossForRate = deals.reduce((sum, d) => {
+      const base = d.funnel === 'new' ? d.comm * 0.92 : d.comm;
+      return sum + base;
+    }, 0);
+    document.getElementById('monthTotal').value = Math.round(totalGrossForRate);
+
+    setLoadProgress(100, 'Готово!');
+    setTimeout(() => {
+      document.getElementById('loadingOverlay').style.opacity = '0';
+      document.getElementById('loadingOverlay').style.transition = 'opacity 0.4s';
+      setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 400);
+    }, 300);
+
+  } catch(e) {
+    console.error('Bitrix init error:', e);
+    // Если не удалось — скрываем загрузку и работаем с демо-данными
+    document.getElementById('loadStatus').textContent = '⚠️ Не удалось подключиться — работаем в демо-режиме';
+    document.getElementById('loadBar').style.background = 'var(--danger)';
+    setTimeout(() => {
+      document.getElementById('loadingOverlay').style.opacity = '0';
+      document.getElementById('loadingOverlay').style.transition = 'opacity 0.4s';
+      setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 400);
+    }, 1500);
+  } finally {
+    renderDeals();
+    updateStats();
+    calcComm();
+    calcGoal();
+  }
+}
+
 // INIT
 renderDeals();
 updateStats();
 calcComm();
 calcGoal();
+initBitrix();
 </script>
 </body>
 </html>
