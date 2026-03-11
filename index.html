@@ -686,16 +686,17 @@ function getBase(comm, type) {
 
 function calcComm() {
   const comm = parseFloat(document.getElementById('commInput').value) || 0;
-  const type = document.getElementById('dealType').value;
+  const dealFunnel = document.getElementById('dealType').value;
   const monthTotal = parseFloat(document.getElementById('monthTotal').value) || 0;
 
-  const base = document.getElementById('dealType').value === 'new' ? comm * 0.92 : comm;
-  const { base: rateBase, bonus: rateBonus, total: rate } = getRate(monthTotal);
-  const result = base * rate / 100;
-  const agency = base - result;
+  const commBase = dealFunnel === 'new' ? comm * 0.92 : comm;
+  const rateInfo = getRate(monthTotal);
+  const rate = rateInfo.total;
+  const result = commBase * rate / 100;
+  const agency = commBase - result;
 
   document.getElementById('rPct').textContent = rate + '%';
-  document.getElementById('rBase').textContent = comm > 0 ? fmt(base) : '—';
+  document.getElementById('rBase').textContent = comm > 0 ? fmt(commBase) : '—';
   document.getElementById('rResult').textContent = comm > 0 ? fmt(result) : '—';
   document.getElementById('rAgency').textContent = comm > 0 ? fmt(agency) : '—';
   document.getElementById('agentPct').textContent = rate + '%';
@@ -707,7 +708,7 @@ function calcComm() {
 
   // info pills
   let infos = [];
-  if (type === 'new') infos.push(`<div class="info-pill">🏗️ Новостройка: <b>-8% расходов (${fmt(comm * 0.08)})</b></div>`);
+  if (dealFunnel === 'new') infos.push(`<div class="info-pill">🏗️ Новостройка: <b>-8% расходов (${fmt(comm * 0.08)})</b></div>`);
   if (monthTotal >= 300000) infos.push(`<div class="info-pill">🏆 План выполнен: <b>базовая ставка 50%</b></div>`);
   if (bonuses.plan) infos.push(`<div class="info-pill">🔁 Повторный план: <b>+5%</b></div>`);
   if (bonuses.video) infos.push(`<div class="info-pill">🎥 Видео-отзыв: <b>+3%</b></div>`);
