@@ -707,7 +707,6 @@ function calcComm() {
 
   // info pills
   let infos = [];
-  const type = document.getElementById('dealType').value;
   if (type === 'new') infos.push(`<div class="info-pill">🏗️ Новостройка: <b>-8% расходов (${fmt(comm * 0.08)})</b></div>`);
   if (monthTotal >= 300000) infos.push(`<div class="info-pill">🏆 План выполнен: <b>базовая ставка 50%</b></div>`);
   if (bonuses.plan) infos.push(`<div class="info-pill">🔁 Повторный план: <b>+5%</b></div>`);
@@ -915,19 +914,22 @@ async function bx(method, params = {}) {
 let categoryMap = {}; // categoryId -> funnel type
 
 async function loadCategories() {
+  // Определяем воронку по названию категории через crm.dealcategory.list
   try {
-    const cats = await bx('crm.deal.category.list');
-    if (!cats) return;
-    const list = cats.items || cats;
+    const result = await bx('crm.dealcategory.list');
+    const list = Array.isArray(result) ? result : (result?.items || []);
     list.forEach(c => {
       const name = (c.NAME || '').toLowerCase();
-      if (name.includes('новостройк') || name.includes('new')) categoryMap[c.ID] = 'new';
-      else if (name.includes('покупк') || name.includes('buy')) categoryMap[c.ID] = 'buy';
-      else if (name.includes('продаж') || name.includes('sale')) categoryMap[c.ID] = 'sale';
-      else categoryMap[c.ID] = 'buy'; // fallback
+      if (name.includes('новостройк')) categoryMap[String(c.ID)] = 'new';
+      else if (name.includes('покупк')) categoryMap[String(c.ID)] = 'buy';
+      else if (name.includes('продаж')) categoryMap[String(c.ID)] = 'sale';
+      else categoryMap[String(c.ID)] = 'buy';
     });
-    categoryMap['0'] = 'buy'; // общая воронка
-  } catch(e) { console.log('categories error', e); }
+    categoryMap['0'] = 'buy';
+  } catch(e) {
+    categoryMap['0'] = 'buy';
+    console.log('categories skipped:', e);
+  }
 }
 
 function guessFunnelFromStage(stageId, categoryId) {
